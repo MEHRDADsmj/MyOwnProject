@@ -46,11 +46,23 @@ protected:
 	UPROPERTY(EditAnywhere)
 		float MaxWalkSpeed = 600.0f;
 
+	UPROPERTY(EditAnywhere)
+		float JumpXMultiplier = 10.0f;
+
+	UPROPERTY(EditAnywhere)
+		float JumpYMultiplier = 10.0f;
+
+	UPROPERTY(EditAnywhere)
+		float JumpZ = 100.0f;
+
 	UPROPERTY(BlueprintReadWrite)
 		bool IsAttacking = false;
 
 	UPROPERTY(BlueprintReadWrite)
 		bool IsDuringAttack = false;
+
+	UPROPERTY(BlueprintReadWrite)
+		bool IsJumping = false;
 
 	UPROPERTY(BlueprintReadWrite)
 		uint8 Combo = 1;
@@ -65,6 +77,12 @@ public:
 	UFUNCTION()
 		void Attack();
 
+	UFUNCTION()
+		void DoJump();
+
 	UFUNCTION(BlueprintImplementableEvent)
 		void PlayComboAnimMontage();
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void PlayJumpAnimMontage();
 };

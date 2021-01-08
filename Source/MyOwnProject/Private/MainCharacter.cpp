@@ -52,11 +52,16 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAxis("Turn", this, &AMainCharacter::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &AMainCharacter::AddControllerPitchInput);
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMainCharacter::Attack);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMainCharacter::DoJump);
 }
 
 void AMainCharacter::MoveForward(float AxisValue)
 {
-	if (IsAttacking)
+	if (IsJumping)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 0;
+	}
+	else if (IsAttacking)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 2;
 	}
@@ -76,7 +81,11 @@ void AMainCharacter::MoveForward(float AxisValue)
 
 void AMainCharacter::MoveRight(float AxisValue)
 {
-	if (IsAttacking)
+	if (IsJumping)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 0;
+	}
+	else if (IsAttacking)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 2;
 	}
@@ -96,7 +105,7 @@ void AMainCharacter::MoveRight(float AxisValue)
 
 void AMainCharacter::Attack()
 {
-	if (IsDuringAttack)
+	if (IsDuringAttack || IsJumping)
 	{
 		return;
 	}
@@ -110,4 +119,23 @@ void AMainCharacter::Attack()
 
 	PlayComboAnimMontage();
 	Combo++;
+}
+
+void AMainCharacter::DoJump()
+{
+	if (IsJumping || IsDuringAttack)
+	{
+		return;
+	}
+	
+	IsJumping = true;
+	FRotator Rotation = GetActorRotation();
+	Rotation.Normalize();
+	FVector Direction = Rotation.Vector();
+	Direction.X *= JumpXMultiplier;
+	Direction.Y *= JumpYMultiplier;
+	Direction.Z = JumpZ;
+	LaunchCharacter(Direction, false, false);
+	
+	PlayJumpAnimMontage();
 }
