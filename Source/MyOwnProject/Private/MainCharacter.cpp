@@ -113,11 +113,11 @@ void AMainCharacter::Attack()
 	if (!IsAttacking)
 	{
 		IsAttacking = true;
-		Combo = 1;
+		Combo = 0;
 	}
 	IsDuringAttack = true;
 
-	PlayComboAnimMontage();
+	PlayWeaponCombo();
 	Combo++;
 }
 

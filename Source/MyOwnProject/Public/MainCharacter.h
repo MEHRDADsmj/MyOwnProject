@@ -65,7 +65,7 @@ protected:
 		bool IsJumping = false;
 
 	UPROPERTY(BlueprintReadWrite)
-		uint8 Combo = 1;
+		uint8 Combo = 0;
 
 public:
 	UFUNCTION()
@@ -81,7 +81,7 @@ public:
 		void DoJump();
 
 	UFUNCTION(BlueprintImplementableEvent)
-		void PlayComboAnimMontage();
+		void PlayWeaponCombo();
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void PlayJumpAnimMontage();
