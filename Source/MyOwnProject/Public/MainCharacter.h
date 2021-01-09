@@ -8,7 +8,6 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SphereComponent.h"
-#include "Weapon.h"
 
 #include "MainCharacter.generated.h"
 
@@ -78,9 +77,8 @@ protected:
 	UPROPERTY()
 		AActor* LockedTarget;
 
-	//Using weapon class is temporary
 	UPROPERTY(EditAnywhere)
-		TSubclassOf<AWeapon> TargetLockClassFilter;
+		TSubclassOf<AActor> TargetLockClassFilter;
 
 public:
 	UFUNCTION()
