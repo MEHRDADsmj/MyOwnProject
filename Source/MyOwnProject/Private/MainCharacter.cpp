@@ -6,14 +6,19 @@
 // Sets default values
 AMainCharacter::AMainCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	//Attachments
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
+
 	CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
 	CameraComp->SetupAttachment(SpringArm);
+
+	AttackRangeComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
+	AttackRangeComp->SetupAttachment(RootComponent);
+	AttackRangeComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
 	//Rotation Setup
 	bUseControllerRotationPitch = false;
@@ -32,7 +37,7 @@ AMainCharacter::AMainCharacter()
 void AMainCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 }
 
 // Called every frame
@@ -40,6 +45,10 @@ void AMainCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (IsLocked)
+	{
+		LockOnTarget();
+	}
 }
 
 // Called to bind functionality to input
@@ -53,6 +62,7 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAxis("LookUp", this, &AMainCharacter::AddControllerPitchInput);
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMainCharacter::Attack);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMainCharacter::DoJump);
+	PlayerInputComponent->BindAction("Lock", IE_Pressed, this, &AMainCharacter::RevertIsLocked);
 }
 
 void AMainCharacter::MoveForward(float AxisValue)
@@ -109,7 +119,7 @@ void AMainCharacter::Attack()
 	{
 		return;
 	}
-	
+
 	if (!IsAttacking)
 	{
 		IsAttacking = true;
@@ -127,7 +137,7 @@ void AMainCharacter::DoJump()
 	{
 		return;
 	}
-	
+
 	IsJumping = true;
 	FRotator Rotation = GetActorRotation();
 	Rotation.Normalize();
@@ -136,6 +146,53 @@ void AMainCharacter::DoJump()
 	Direction.Y *= JumpYMultiplier;
 	Direction.Z = JumpZ;
 	LaunchCharacter(Direction, false, false);
-	
+
 	PlayJumpAnimMontage();
+}
+
+void AMainCharacter::LockOnTarget()
+{
+	TArray<AActor*> OverlappingActors;
+	AttackRangeComp->GetOverlappingActors(OverlappingActors, TargetLockClassFilter);
+
+	if (OverlappingActors.Num() == 0)
+	{
+		SetIsLocked(false);
+		return;
+	}
+	else if (LockedTarget == nullptr)
+	{
+		LockedTarget = OverlappingActors[0];
+	}
+
+	ChangeCameraRotationToFace(LockedTarget);
+}
+
+void AMainCharacter::ChangeCameraRotationToFace(AActor* TargetActor)
+{
+	if (TargetActor == nullptr)
+	{
+		return;
+	}
+	FVector PlayerLocation = GetActorLocation();
+	FVector TargetLocation = TargetActor->GetActorLocation();
+	FVector Direction = TargetLocation - PlayerLocation;
+	FRotator NewRotation = Direction.Rotation();
+	Controller->SetControlRotation(NewRotation);
+}
+
+void AMainCharacter::RevertIsLocked()
+{
+	TArray<AActor*> OverlappingActors;
+	AttackRangeComp->GetOverlappingActors(OverlappingActors, TargetLockClassFilter);
+
+	if (OverlappingActors.Num() != 0)
+	{
+		IsLocked = !IsLocked;
+	}
+}
+
+void AMainCharacter::SetIsLocked(bool Value)
+{
+	IsLocked = Value;
 }
