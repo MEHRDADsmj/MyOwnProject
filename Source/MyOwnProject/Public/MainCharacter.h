@@ -77,7 +77,7 @@ protected:
 	UPROPERTY()
 		AActor* LockedTarget;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		TSubclassOf<AActor> TargetLockClassFilter;
 
 	UPROPERTY()
@@ -118,12 +118,21 @@ public:
 		void SetIsLocked(bool Value);
 
 	UFUNCTION()
-		void ChangeTarget(float Value);
+		void NextTarget();
 
-	template<class T>
 	UFUNCTION()
-		T ClampLoop(T Value, T Min, T Max);
+		void PreviousTarget();
 
 	UFUNCTION()
 		void RightThumbStickXFunction(float Value);
+
+	UFUNCTION()
+		void AddPossibleTarget(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+			int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+		void RemovePossibleTarget(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	UFUNCTION(BlueprintImplementableEvent)
+		bool HasSameBP(AActor* FirstActor, TSubclassOf<AActor> ClassFilter);
 };

@@ -38,6 +38,8 @@ void AMainCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	AttackRangeComp->OnComponentBeginOverlap.AddDynamic(this, &AMainCharacter::AddPossibleTarget);
+	AttackRangeComp->OnComponentEndOverlap.AddDynamic(this, &AMainCharacter::RemovePossibleTarget);
 }
 
 // Called every frame
@@ -63,7 +65,8 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMainCharacter::Attack);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMainCharacter::DoJump);
 	PlayerInputComponent->BindAction("Lock", IE_Pressed, this, &AMainCharacter::RevertIsLocked);
-	PlayerInputComponent->BindAxis("ChangeTarget", this, &AMainCharacter::ChangeTarget);
+	PlayerInputComponent->BindAction("NextTarget", IE_Pressed, this, &AMainCharacter::NextTarget);
+	PlayerInputComponent->BindAction("PreviousTarget", IE_Pressed, this, &AMainCharacter::PreviousTarget);
 	PlayerInputComponent->BindAxis("RightThumbStickXFunction", this, &AMainCharacter::RightThumbStickXFunction);
 }
 
@@ -80,7 +83,7 @@ void AMainCharacter::MoveForward(float AxisValue)
 	}
 	else if (IsAttacking)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 2;
+		GetCharacterMovement()->MaxWalkSpeed = 2;//Just to let it turn during attack
 	}
 	else
 	{
@@ -109,7 +112,7 @@ void AMainCharacter::MoveRight(float AxisValue)
 	}
 	else if (IsAttacking)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = 2;
+		GetCharacterMovement()->MaxWalkSpeed = 2;//Just to let it turn during attack
 	}
 	else
 	{
@@ -135,6 +138,7 @@ void AMainCharacter::Attack()
 	if (!IsAttacking)
 	{
 		IsAttacking = true;
+		//Resets combo
 		Combo = 0;
 	}
 	IsDuringAttack = true;
@@ -153,10 +157,12 @@ void AMainCharacter::DoJump()
 	IsJumping = true;
 	FRotator Rotation = GetActorRotation();
 	Rotation.Normalize();
+	//Gets player's movement direction
 	FVector Direction = Rotation.Vector();
 	Direction.X *= JumpXMultiplier;
 	Direction.Y *= JumpYMultiplier;
 	Direction.Z = JumpZ;
+	//Launches player
 	LaunchCharacter(Direction, false, false);
 
 	PlayJumpAnimMontage();
@@ -164,10 +170,13 @@ void AMainCharacter::DoJump()
 
 void AMainCharacter::LockOnTarget()
 {
-	AttackRangeComp->GetOverlappingActors(TargetActors, TargetLockClassFilter);
+	//Makes sure index is in array bound
+	CurrentTargetIndex = FMath::Clamp(CurrentTargetIndex, 0, TargetActors.Num() - 1);
 
 	if (TargetActors.Num() == 0)
 	{
+		//Sets everything back to normal
+		LockedTarget = nullptr;
 		SetIsLocked(false);
 		CurrentTargetIndex = 0;
 		return;
@@ -180,28 +189,26 @@ void AMainCharacter::LockOnTarget()
 	ChangeCameraRotationToFace(LockedTarget);
 }
 
+//Turns camera so that player focuses on the input actor
 void AMainCharacter::ChangeCameraRotationToFace(AActor* TargetActor)
 {
 	if (TargetActor == nullptr)
 	{
 		return;
 	}
+	//Gets player to target vector
 	FVector PlayerLocation = GetActorLocation();
 	FVector TargetLocation = TargetActor->GetActorLocation();
 	FVector Direction = TargetLocation - PlayerLocation;
+	//Creates a rotator from it
 	FRotator NewRotation = Direction.Rotation();
+
 	Controller->SetControlRotation(NewRotation);
 }
 
 void AMainCharacter::RevertIsLocked()
 {
-	TArray<AActor*> OverlappingActors;
-	AttackRangeComp->GetOverlappingActors(OverlappingActors, TargetLockClassFilter);
-
-	if (OverlappingActors.Num() != 0)
-	{
-		IsLocked = !IsLocked;
-	}
+	IsLocked = !IsLocked;
 }
 
 void AMainCharacter::SetIsLocked(bool Value)
@@ -209,45 +216,21 @@ void AMainCharacter::SetIsLocked(bool Value)
 	IsLocked = Value;
 }
 
-void AMainCharacter::ChangeTarget(float Value)
+//Increments target actors array's index
+void AMainCharacter::NextTarget()
 {
-	if (Value == 0.0f)
-	{
-		return;
-	}
-
-	if (TargetActors.Num() > 0)
-	{
-		LockedTarget = nullptr;
-
-		if (Value < 0)
-		{
-			CurrentTargetIndex--;
-		}
-		else if (Value > 0)
-		{
-			CurrentTargetIndex++;
-		}
-		CurrentTargetIndex = ClampLoop(CurrentTargetIndex, 0, TargetActors.Num() - 1);
-
-		LockOnTarget();
-	}
+	LockedTarget = nullptr;
+	CurrentTargetIndex++;
 }
 
-template<class T>
-T AMainCharacter::ClampLoop(T Value, T Min, T Max)
+//Decrements target actors array's index
+void AMainCharacter::PreviousTarget()
 {
-	if (Value > Max)
-	{
-		return Min;
-	}
-	else if (Value < Min)
-	{
-		return Max;
-	}
-	return Value;
+	LockedTarget = nullptr;
+	CurrentTargetIndex--;
 }
 
+//Decides whether right thumb stick X axis should rotate camera or change target
 void AMainCharacter::RightThumbStickXFunction(float Value)
 {
 	if (Value == 0.0f)
@@ -257,10 +240,34 @@ void AMainCharacter::RightThumbStickXFunction(float Value)
 
 	if (IsLocked == true)
 	{
-		ChangeTarget(Value);
+		if (Value > 0)
+		{
+			NextTarget();
+		}
+		else
+		{
+			PreviousTarget();
+		}
 	}
 	else
 	{
 		AddControllerYawInput(Value);
+	}
+}
+
+void AMainCharacter::AddPossibleTarget(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (HasSameBP(OtherActor, TargetLockClassFilter))
+	{
+		TargetActors.AddUnique(OtherActor);
+	}
+}
+
+void AMainCharacter::RemovePossibleTarget(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (HasSameBP(OtherActor, TargetLockClassFilter))
+	{
+		TargetActors.Remove(OtherActor);
 	}
 }
