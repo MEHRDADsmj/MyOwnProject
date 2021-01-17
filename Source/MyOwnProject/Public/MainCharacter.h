@@ -80,6 +80,12 @@ protected:
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<AActor> TargetLockClassFilter;
 
+	UPROPERTY()
+		TArray<AActor*> TargetActors;
+
+	UPROPERTY()
+		int32 CurrentTargetIndex = 0;
+
 public:
 	UFUNCTION()
 		void MoveForward(float AxisValue);
@@ -110,4 +116,14 @@ public:
 
 	UFUNCTION()
 		void SetIsLocked(bool Value);
+
+	UFUNCTION()
+		void ChangeTarget(float Value);
+
+	template<class T>
+	UFUNCTION()
+		T ClampLoop(T Value, T Min, T Max);
+
+	UFUNCTION()
+		void RightThumbStickXFunction(float Value);
 };

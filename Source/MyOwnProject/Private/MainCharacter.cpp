@@ -63,10 +63,17 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMainCharacter::Attack);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMainCharacter::DoJump);
 	PlayerInputComponent->BindAction("Lock", IE_Pressed, this, &AMainCharacter::RevertIsLocked);
+	PlayerInputComponent->BindAxis("ChangeTarget", this, &AMainCharacter::ChangeTarget);
+	PlayerInputComponent->BindAxis("RightThumbStickXFunction", this, &AMainCharacter::RightThumbStickXFunction);
 }
 
 void AMainCharacter::MoveForward(float AxisValue)
 {
+	if (AxisValue == 0.0f)
+	{
+		return;
+	}
+
 	if (IsJumping)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 0;
@@ -91,6 +98,11 @@ void AMainCharacter::MoveForward(float AxisValue)
 
 void AMainCharacter::MoveRight(float AxisValue)
 {
+	if (AxisValue == 0.0f)
+	{
+		return;
+	}
+
 	if (IsJumping)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 0;
@@ -152,17 +164,17 @@ void AMainCharacter::DoJump()
 
 void AMainCharacter::LockOnTarget()
 {
-	TArray<AActor*> OverlappingActors;
-	AttackRangeComp->GetOverlappingActors(OverlappingActors, TargetLockClassFilter);
+	AttackRangeComp->GetOverlappingActors(TargetActors, TargetLockClassFilter);
 
-	if (OverlappingActors.Num() == 0)
+	if (TargetActors.Num() == 0)
 	{
 		SetIsLocked(false);
+		CurrentTargetIndex = 0;
 		return;
 	}
 	else if (LockedTarget == nullptr)
 	{
-		LockedTarget = OverlappingActors[0];
+		LockedTarget = TargetActors[CurrentTargetIndex];
 	}
 
 	ChangeCameraRotationToFace(LockedTarget);
@@ -195,4 +207,60 @@ void AMainCharacter::RevertIsLocked()
 void AMainCharacter::SetIsLocked(bool Value)
 {
 	IsLocked = Value;
+}
+
+void AMainCharacter::ChangeTarget(float Value)
+{
+	if (Value == 0.0f)
+	{
+		return;
+	}
+
+	if (TargetActors.Num() > 0)
+	{
+		LockedTarget = nullptr;
+
+		if (Value < 0)
+		{
+			CurrentTargetIndex--;
+		}
+		else if (Value > 0)
+		{
+			CurrentTargetIndex++;
+		}
+		CurrentTargetIndex = ClampLoop(CurrentTargetIndex, 0, TargetActors.Num() - 1);
+
+		LockOnTarget();
+	}
+}
+
+template<class T>
+T AMainCharacter::ClampLoop(T Value, T Min, T Max)
+{
+	if (Value > Max)
+	{
+		return Min;
+	}
+	else if (Value < Min)
+	{
+		return Max;
+	}
+	return Value;
+}
+
+void AMainCharacter::RightThumbStickXFunction(float Value)
+{
+	if (Value == 0.0f)
+	{
+		return;
+	}
+
+	if (IsLocked == true)
+	{
+		ChangeTarget(Value);
+	}
+	else
+	{
+		AddControllerYawInput(Value);
+	}
 }
