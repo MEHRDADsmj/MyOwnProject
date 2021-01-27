@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SphereComponent.h"
+#include "HealthComponent.h"
 
 #include "MainCharacter.generated.h"
 
@@ -32,6 +33,7 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
+	//Components
 	UPROPERTY(VisibleAnywhere)
 		USpringArmComponent* SpringArm;
 
@@ -41,6 +43,10 @@ protected:
 	UPROPERTY(EditAnywhere)
 		USphereComponent* AttackRangeComp;
 
+	UPROPERTY(EditAnywhere)
+		UHealthComponent* HealthComponent;
+
+	//Variables
 	UPROPERTY(EditAnywhere)
 		float RotationRate = 720.0f;
 
@@ -135,4 +141,11 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 		bool HasSameBP(AActor* FirstActor, TSubclassOf<AActor> ClassFilter);
+
+	UFUNCTION()
+		void OnHealthChanged(UHealthComponent* HealthComp, float Health, class AController* InstigatedBy);
+
+	UFUNCTION()
+		bool GetIsAttacking();
+
 };

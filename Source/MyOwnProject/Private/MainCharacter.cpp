@@ -20,6 +20,8 @@ AMainCharacter::AMainCharacter()
 	AttackRangeComp->SetupAttachment(RootComponent);
 	AttackRangeComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComp"));
+
 	//Rotation Setup
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -40,6 +42,8 @@ void AMainCharacter::BeginPlay()
 
 	AttackRangeComp->OnComponentBeginOverlap.AddDynamic(this, &AMainCharacter::AddPossibleTarget);
 	AttackRangeComp->OnComponentEndOverlap.AddDynamic(this, &AMainCharacter::RemovePossibleTarget);
+
+	HealthComponent->OnHealthChanged.AddDynamic(this, &AMainCharacter::OnHealthChanged);
 }
 
 // Called every frame
@@ -270,4 +274,17 @@ void AMainCharacter::RemovePossibleTarget(UPrimitiveComponent* OverlappedCompone
 	{
 		TargetActors.Remove(OtherActor);
 	}
+}
+
+void AMainCharacter::OnHealthChanged(UHealthComponent* HealthComp, float Health, class AController* InstigatedBy)
+{
+	if (Health <= 0.0f)
+	{
+		Destroy();
+	}
+}
+
+bool AMainCharacter::GetIsAttacking()
+{
+	return IsAttacking;
 }
